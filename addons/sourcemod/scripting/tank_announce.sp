@@ -11,7 +11,7 @@ public Plugin myinfo = {
 	author = "Visor",
 	description = "Announce when a Tank has spawned",
 	version = "build_0000",
-	url = ""
+	url = "https://github.com/TouchMe-Inc/l4d2_tank_announce"
 }
 
 
