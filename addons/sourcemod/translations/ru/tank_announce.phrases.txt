@@ -1,0 +1,13 @@
+"Phrases"
+{
+	"TAG"
+	{
+		"ru"			"<{green}Tank Announce{default}> "
+	}
+
+	"TANK_ANNOUNCE"
+	{
+		"#format"		"{1:s}"
+		"ru"			"Танк {red}{1}{default} заспавнился"
+	}
+}

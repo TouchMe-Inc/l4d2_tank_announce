@@ -1,0 +1,13 @@
+"Phrases"
+{
+	"TAG"
+	{
+		"en"			"<{green}Tank Announce{default}> "
+	}
+
+	"TANK_ANNOUNCE"
+	{
+		"#format"		"{1:s}"
+		"en"			"Tank {red}{1}{default} has spawned"
+	}
+}
