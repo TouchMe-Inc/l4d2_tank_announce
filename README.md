@@ -1,4 +1,4 @@
 # About tank_announce
-Announce when a tank has spawned.
+Announce damage dealt to tanks.
 
-![image](https://github.com/TouchMe-Inc/l4d2_tank_announce/assets/89782512/79187b39-2da1-4054-aa55-542127421559)
+![image](https://github.com/user-attachments/assets/b6a2a2aa-12dd-43d5-8b5e-7a080f398e57)
