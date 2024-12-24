@@ -10,7 +10,7 @@ public Plugin myinfo = {
     name        = "TankAnnounce",
     author      = "Visor, Forgetest, xoxo, Griffin and Blade, Sir, TouchMe",
     description = "Announce damage dealt to tanks by survivors",
-    version     = "build_0000",
+    version     = "build_0001",
     url         = "https://github.com/Target5150/MoYu_Server_Stupid_Plugins"
 }
 
@@ -37,7 +37,7 @@ public Plugin myinfo = {
 #define TRANSLATIONS            "tank_announce.phrases"
 
 
-#define BOT_NAME                "Bot"
+#define BOT_NAME                "AI"
 
 /**
  * Entity-Relationship: UserVector(Userid, ...)
@@ -56,9 +56,6 @@ methodmap UserVector < ArrayList {
     }
 
     public void Remove(int iIdx) {
-        UserVector uDamagerVector = this.Get(iIdx, eDamagerInfoVector);
-        delete uDamagerVector;
-
         RemoveFromArray(this, iIdx);
     }
 
@@ -172,11 +169,11 @@ public APLRes AskPluginLoad2(Handle hPlugin, bool bLate, char[] szError, int iEr
         return APLRes_SilentFailure;
     }
 
-    CreateNative("TFA_Punches",   Native_Punches);
-    CreateNative("TFA_Rocks",     Native_Rocks);
-    CreateNative("TFA_Hittables", Native_Hittables);
-    CreateNative("TFA_TotalDmg",  Native_TotalDamage);
-    CreateNative("TFA_UpTime",    Native_UpTime);
+    CreateNative("TA_Punches",   Native_Punches);
+    CreateNative("TA_Rocks",     Native_Rocks);
+    CreateNative("TA_Hittables", Native_Hittables);
+    CreateNative("TA_TotalDmg",  Native_TotalDamage);
+    CreateNative("TA_UpTime",    Native_UpTime);
 
     RegPluginLibrary("tank_announce");
     return APLRes_Success;
@@ -307,9 +304,9 @@ public void OnClientDisconnect(int iClient)
     char szKey[16];
     IntToString(iUserId, szKey, sizeof(szKey));
 
-    char szName[MAX_NAME_LENGTH];
-    GetClientName(iClient, szName, sizeof(szName));
-    g_smUserNames.SetString(szKey, szName);
+    char szClientName[MAX_NAME_LENGTH];
+    GetClientName(iClient, szClientName, sizeof(szClientName));
+    g_smUserNames.SetString(szKey, szClientName);
 
     if (!IsFakeClient(iClient)) {
         return;
@@ -366,7 +363,7 @@ public void L4D_OnSpawnTank_Post(int iClient, const float vPos[3], const float v
     g_iTankIdx++;
 
     // Multiple tanks?
-    float fDelay = 0.1 * ++g_iTimerDelay;
+    float fDelay = 0.2 * ++ g_iTimerDelay;
 
     // New tank, damage has not been announced
     DataPack hPack;
@@ -409,14 +406,15 @@ Action Timer_Announce(Handle hTimer, DataPack hPack)
         iClient = GetEntProp(L4D_GetResourceEntity(), Prop_Send, "m_pendingTankPlayerIndex");
         if (iClient && IsClientInGame(iClient))
         {
-            CPrintToChatAll("%t%t", "TAG", "TANK_SPAWNED", szIdx, BOT_NAME);
+            char szTankName[MAX_NAME_LENGTH];
+            GetClientNameFixed(iClient, szTankName, sizeof(szTankName), SHORT_NAME_LENGTH);
+
+            CPrintToChatAll("%t%t", "TAG", "TANK_SPAWNED", szIdx, szTankName);
             return Plugin_Stop;
         }
     }
-
-    char szTankName[MAX_NAME_LENGTH];
-    GetClientNameFixed(iClient, szTankName, sizeof(szTankName), SHORT_NAME_LENGTH);
-    CPrintToChatAll("%t%t", "TAG", "TANK_SPAWNED", szIdx, szTankName);
+  
+    CPrintToChatAll("%t%t", "TAG", "TANK_SPAWNED", szIdx, BOT_NAME);
 
     return Plugin_Stop;
 }
@@ -428,7 +426,11 @@ void Event_RoundStart(Event event, const char[] szEventName, bool bDontBroadcast
     g_iTimerDelay = 0;
     g_bIsTankInPlay = false;
 
-    while (g_aTankInfo.Length) {
+    while (g_aTankInfo.Length)
+    {
+        UserVector uDamagerVector = g_aTankInfo.Get(0, eDamagerInfoVector);
+        delete uDamagerVector;
+
         g_aTankInfo.Remove(0);
     }
 
@@ -735,8 +737,16 @@ void PrintTankInfo(int iUserId)
     int iDmgTtl = 0, iPctTtl = 0, iSize = uDamagerVector.Length;
     for (int i = 0; i < iSize; i++)
     {
-        iDmgTtl += uDamagerVector.Get(i, eDmgDone);
-        iPctTtl += GetDamageAsPercent(uDamagerVector.Get(i, eDmgDone), iMaxHealth);
+        int iDamage = uDamagerVector.Get(i, eDmgDone);
+
+        if (iDamage <= 0)
+        {
+            uDamagerVector.Remove(i);
+            continue;
+        }
+
+        iDmgTtl += iDamage;
+        iPctTtl += GetDamageAsPercent(iDamage, iMaxHealth);
     }
 
     char szIdx[8];
@@ -746,10 +756,15 @@ void PrintTankInfo(int iUserId)
 
     if (IsFakeClient(iClient))
     {
-        if (bHumanControlled) {
-            FormatEx(szTankName, sizeof(szTankName), "%s(%s)", BOT_NAME, szTankName);
-        } else {
-            FormatEx(szTankName, sizeof(szTankName), BOT_NAME);
+        if (bHumanControlled)
+        {
+            char szLastTankName[MAX_NAME_LENGTH];
+            strcopy(szLastTankName, sizeof(szLastTankName), szTankName);
+            FormatEx(szTankName, sizeof(szTankName), "%s[%s]", BOT_NAME, szLastTankName);
+        }
+        else
+        {
+            strcopy(szTankName, sizeof(szTankName), BOT_NAME);
         }
     }
 
@@ -802,17 +817,13 @@ void PrintTankInfo(int iUserId)
             }
         }
 
-        // ignore cases printing zeros only
-        if (iDmg > 0)
-        {
-            FormatEx(szDmgSpace, sizeof(szDmgSpace), "%s",
-            iDmg < 10 ? "      " : iDmg < 100 ? "    " : iDmg < 1000 ? "  " : "");
+        FormatEx(szDmgSpace, sizeof(szDmgSpace), "%s",
+        iDmg < 10 ? "      " : iDmg < 100 ? "    " : iDmg < 1000 ? "  " : "");
 
-            FormatEx(szPrcntSpace, sizeof(szPrcntSpace), "%s",
-            iPct < 10 ? "  " : iPct < 100 ? " " : "");
-            // "{olive}%s%d {green}|%s{default}%d%%{green}%s|{default}: %s%s"
-            CPrintToChatAll("%t%t", (iAttacker + 1) == iSize ? "BRACKET_END" : "BRACKET_MIDDLE", "DAMAGE", szDmgSpace, iDmg, szPrcntSpace, iPct, szPrcntSpace, szTeamColor[iTeamIdx], szClientName);
-        }
+        FormatEx(szPrcntSpace, sizeof(szPrcntSpace), "%s",
+        iPct < 10 ? "  " : iPct < 100 ? " " : "");
+        // "{olive}%s%d {green}|%s{default}%d%%{green}%s|{default}: %s%s"
+        CPrintToChatAll("%t%t", (iAttacker + 1) == iSize ? "BRACKET_END" : "BRACKET_MIDDLE", "DAMAGE", szDmgSpace, iDmg, szPrcntSpace, iPct, szPrcntSpace, szTeamColor[iTeamIdx], szClientName);
     }
 }
 
@@ -822,6 +833,9 @@ void ClearTankInfo(int iUserId)
     if (!g_aTankInfo.UserIndex(iUserId, iIdx, false)) {
         return;
     }
+
+    UserVector uDamagerVector = g_aTankInfo.Get(iIdx, eDamagerInfoVector);
+    delete uDamagerVector;
 
     g_aTankInfo.Remove(iIdx);
 }
