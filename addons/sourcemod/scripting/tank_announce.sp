@@ -10,7 +10,7 @@ public Plugin myinfo = {
     name        = "TankAnnounce",
     author      = "Visor, Forgetest, xoxo, Griffin and Blade, Sir, TouchMe",
     description = "Announce damage dealt to tanks by survivors",
-    version     = "build_0001",
+    version     = "build_0002",
     url         = "https://github.com/Target5150/MoYu_Server_Stupid_Plugins"
 }
 
@@ -53,10 +53,6 @@ methodmap UserVector < ArrayList {
 
     public void Set(int iIdx, any val, int iType) {
         SetArrayCell(this, iIdx, val, iType + 1);
-    }
-
-    public void Remove(int iIdx) {
-        RemoveFromArray(this, iIdx);
     }
 
     public int User(int iIdx) {
@@ -431,7 +427,7 @@ void Event_RoundStart(Event event, const char[] szEventName, bool bDontBroadcast
         UserVector uDamagerVector = g_aTankInfo.Get(0, eDamagerInfoVector);
         delete uDamagerVector;
 
-        g_aTankInfo.Remove(0);
+        g_aTankInfo.Erase(0);
     }
 
     g_smUserNames.Clear();
@@ -741,7 +737,7 @@ void PrintTankInfo(int iUserId)
 
         if (iDamage <= 0)
         {
-            uDamagerVector.Remove(i);
+            uDamagerVector.Erase(i);
             continue;
         }
 
@@ -837,7 +833,7 @@ void ClearTankInfo(int iUserId)
     UserVector uDamagerVector = g_aTankInfo.Get(iIdx, eDamagerInfoVector);
     delete uDamagerVector;
 
-    g_aTankInfo.Remove(iIdx);
+    g_aTankInfo.Erase(iIdx);
 }
 
 // utilize our map g_smUserNames
