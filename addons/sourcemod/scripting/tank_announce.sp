@@ -10,8 +10,8 @@ public Plugin myinfo = {
     name        = "TankAnnounce",
     author      = "Visor, Forgetest, xoxo, Griffin and Blade, Sir, TouchMe",
     description = "Announce damage dealt to tanks by survivors",
-    version     = "build_0002",
-    url         = "https://github.com/Target5150/MoYu_Server_Stupid_Plugins"
+    version     = "build_0003",
+    url         = "https://github.com/TouchMe-Inc/l4d2_tank_announce"
 }
 
 
