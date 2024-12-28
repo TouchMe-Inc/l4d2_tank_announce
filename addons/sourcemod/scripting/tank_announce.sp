@@ -183,16 +183,8 @@ any Native_Punches(Handle hPlugin, int iNumParams)
     }
 
     int iUserId = GetClientUserId(iClient);
-    UserVector uDamagerVector;
-    if (!g_aTankInfo.UserGet(iUserId, eDamagerInfoVector, uDamagerVector))
-        return 0;
 
-    int iSum = 0, iSize = uDamagerVector.Length;
-    for (int i = 0; i < iSize; i++) {
-        iSum += uDamagerVector.Get(i, ePunch);
-    }
-
-    return iSum;
+    return GetTankPunches(iUserId);
 }
 
 any Native_Rocks(Handle hPlugin, int iNumParams)
@@ -203,16 +195,8 @@ any Native_Rocks(Handle hPlugin, int iNumParams)
     }
 
     int iUserId = GetClientUserId(iClient);
-    UserVector uDamagerVector;
-    if (!g_aTankInfo.UserGet(iUserId, eDamagerInfoVector, uDamagerVector))
-        return 0;
 
-    int iSum = 0, iSize = uDamagerVector.Length;
-    for (int i = 0; i < iSize; i++) {
-        iSum += uDamagerVector.Get(i, eRock);
-    }
-
-    return iSum;
+    return GetTankRocks(iUserId);
 }
 
 any Native_Hittables(Handle hPlugin, int iNumParams)
@@ -223,17 +207,8 @@ any Native_Hittables(Handle hPlugin, int iNumParams)
     }
 
     int iUserId = GetClientUserId(iClient);
-    UserVector uDamagerVector;
-    if (!g_aTankInfo.UserGet(iUserId, eDamagerInfoVector, uDamagerVector)) {
-        return 0;
-    }
-
-    int iSum = 0, iSize = uDamagerVector.Length;
-    for (int i = 0; i < iSize; i++) {
-        iSum += uDamagerVector.Get(i, eHittable);
-    }
-
-    return iSum;
+   
+    return GetTankHittables(iUserId);
 }
 
 any Native_TotalDamage(Handle hPlugin, int iNumParams)
@@ -244,24 +219,20 @@ any Native_TotalDamage(Handle hPlugin, int iNumParams)
     }
 
     int iUserId = GetClientUserId(iClient);
-    int iValue  = 0;
-    g_aTankInfo.UserGet(iUserId, eTotalDamage, iValue);
-    return iValue;
+
+    return GetTankTotalDamage(iUserId);
 }
 
-any Native_UpTime(Handle plugin, int numParams) {
+any Native_UpTime(Handle plugin, int numParams)
+{
     int iClient = GetNativeCell(1);
     if (!IsValidClient(iClient)) {
         ThrowNativeError(SP_ERROR_NATIVE, "Invalid client index %d", iClient);
     }
 
-    int   iUserId = GetClientUserId(iClient);
-    float fValue  = -1.0;
-    if (g_aTankInfo.UserGet(iUserId, eAliveSince, fValue)) {
-        fValue = GetGameTime() - fValue;
-    }
+    int iUserId = GetClientUserId(iClient);
 
-    return RoundToFloor(fValue);
+    return GetTankLifeTime(iUserId);
 }
 
 public void OnPluginStart()
@@ -301,7 +272,7 @@ public void OnClientDisconnect(int iClient)
     IntToString(iUserId, szKey, sizeof(szKey));
 
     char szClientName[MAX_NAME_LENGTH];
-    GetClientName(iClient, szClientName, sizeof(szClientName));
+    GetClientNameFixed(iClient, szClientName, sizeof(szClientName), SHORT_NAME_LENGTH);
     g_smUserNames.SetString(szKey, szClientName);
 
     if (!IsFakeClient(iClient)) {
@@ -439,11 +410,9 @@ void Event_RoundEnd(Event event, const char[] szEventName, bool bDontBroadcast)
     // But only if a tank that hasn't been killed exists
     if (!g_bRoundEnd)
     {
-        int iUserId;
-
-        while (g_aTankInfo.Length)
+        for (int i = g_aTankInfo.Length - 1; i >= 0; i--)
         {
-            iUserId = g_aTankInfo.User(0);
+            int iUserId = g_aTankInfo.User(i);
             PrintTankInfo(iUserId);
             ClearTankInfo(iUserId);
         }
@@ -730,8 +699,8 @@ void PrintTankInfo(int iUserId)
     UserVector uDamagerVector = g_aTankInfo.Get(iIdx, eDamagerInfoVector);
     uDamagerVector.SortCustom(SortAdtDamageDesc);
 
-    int iDmgTtl = 0, iPctTtl = 0, iSize = uDamagerVector.Length;
-    for (int i = 0; i < iSize; i++)
+    int iDmgTtl = 0, iPctTtl = 0;
+    for (int i = uDamagerVector.Length - 1; i >= 0; i--)
     {
         int iDamage = uDamagerVector.Get(i, eDmgDone);
 
@@ -792,6 +761,7 @@ void PrintTankInfo(int iUserId)
     int iLastPct = 100;
     int iAdjustedPctDmg;
     char szDmgSpace[16], szPrcntSpace[16];
+    int iSize = uDamagerVector.Length;
     for (int iAttacker = 0; iAttacker < iSize; iAttacker++)
     {
         // generally needed
@@ -802,7 +772,7 @@ void PrintTankInfo(int iUserId)
         iDmg     = uDamagerVector.Get(iAttacker, eDmgDone);
         iPct     = GetDamageAsPercent(iDmg, iMaxHealth);
 
-        if (iPctAdjustment != 0 && iDmg > 0 && !IsExactPercent(iIdx, iDmg))
+        if (iPctAdjustment != 0 && iDmg > 0 && !IsExactPercent(iDmg, iMaxHealth))
         {
             iAdjustedPctDmg = iPct + iPctAdjustment;
 
@@ -818,9 +788,13 @@ void PrintTankInfo(int iUserId)
 
         FormatEx(szPrcntSpace, sizeof(szPrcntSpace), "%s",
         iPct < 10 ? "  " : iPct < 100 ? " " : "");
-        // "{olive}%s%d {green}|%s{default}%d%%{green}%s|{default}: %s%s"
+
         CPrintToChatAll("%t%t", (iAttacker + 1) == iSize ? "BRACKET_END" : "BRACKET_MIDDLE", "DAMAGE", szDmgSpace, iDmg, szPrcntSpace, iPct, szPrcntSpace, szTeamColor[iTeamIdx], szClientName);
     }
+
+    CPrintToChatAll("%t%t%t", "BRACKET_START", "TAG", "TANK_ALIVE_SCORE", szIdx, szTankName, GetTankLifeTime(iUserId));
+    CPrintToChatAll("%t%t", "BRACKET_MIDDLE", "TANK_IMPACT", GetTankPunches(iUserId), GetTankRocks(iUserId), GetTankHittables(iUserId));
+    CPrintToChatAll("%t%t", "BRACKET_END", "TANK_TOTAL_DAMAGE", GetTankTotalDamage(iUserId));
 }
 
 void ClearTankInfo(int iUserId)
@@ -834,6 +808,68 @@ void ClearTankInfo(int iUserId)
     delete uDamagerVector;
 
     g_aTankInfo.Erase(iIdx);
+}
+
+int GetTankPunches(int iUserId)
+{
+    UserVector uDamagerVector;
+    if (!g_aTankInfo.UserGet(iUserId, eDamagerInfoVector, uDamagerVector)) {
+        return 0;
+    }
+
+    int iPunches = 0, iSize = uDamagerVector.Length;
+    for (int i = 0; i < iSize; i++) {
+        iPunches += uDamagerVector.Get(i, ePunch);
+    }
+
+    return iPunches;
+}
+
+int GetTankRocks(int iUserId)
+{
+    UserVector uDamagerVector;
+    if (!g_aTankInfo.UserGet(iUserId, eDamagerInfoVector, uDamagerVector)) {
+        return 0;
+    }
+
+    int iRocks = 0, iSize = uDamagerVector.Length;
+    for (int i = 0; i < iSize; i++) {
+        iRocks += uDamagerVector.Get(i, eRock);
+    }
+
+    return iRocks;
+}
+
+int GetTankHittables(int iUserId)
+{
+    UserVector uDamagerVector;
+    if (!g_aTankInfo.UserGet(iUserId, eDamagerInfoVector, uDamagerVector)) {
+        return 0;
+    }
+
+    int iHittables = 0, iSize = uDamagerVector.Length;
+    for (int i = 0; i < iSize; i++) {
+        iHittables += uDamagerVector.Get(i, eHittable);
+    }
+
+    return iHittables;
+}
+
+int GetTankTotalDamage(int iUserId)
+{
+    int iTotalDamage = 0;
+    g_aTankInfo.UserGet(iUserId, eTotalDamage, iTotalDamage);
+    return iTotalDamage;
+}
+
+int GetTankLifeTime(int iUserId)
+{
+    float fValue = -1.0;
+    if (g_aTankInfo.UserGet(iUserId, eAliveSince, fValue)) {
+        fValue = GetGameTime() - fValue;
+    }
+
+    return RoundToFloor(fValue);
 }
 
 // utilize our map g_smUserNames
