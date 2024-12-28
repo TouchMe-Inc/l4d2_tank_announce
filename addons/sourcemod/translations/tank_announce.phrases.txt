@@ -65,7 +65,7 @@
 	"TANK_IMPACT"
 	{
 		"#format"		"{1:d},{2:d},{3:d}"
-		"en"			"Punches: {olive}{1}{default} {green}|{default} Rocks: {olive}{2}{default} {green}|{default} Hittables: {olive}{3}"
+		"en"			"Punches: {olive}{1} {green}|{default} Rocks: {olive}{2} {green}|{default} Hittables: {olive}{3}"
 	}
 
 	"TANK_TOTAL_DAMAGE"

@@ -59,13 +59,13 @@
 	"TANK_ALIVE_SCORE"
 	{
 		"#format"		"{1:s},{2:s},{3:d}"
-		"ru"			"Танк{1} {red}{2}{default} нанёс урон за {olive}{3}{default} секунд:"
+		"ru"			"Танк{1} {red}{2}{default} нанёс урон за {olive}{3}{default} секунд(ы):"
 	}
 
 	"TANK_IMPACT"
 	{
 		"#format"		"{1:d},{2:d},{3:d}"
-		"ru"			"Руками: {olive}{1}{default} {green}|{default} Камнями: {olive}{2}{default} {green}|{default} Объектами: {olive}{3}{default}"
+		"ru"			"Руками: {olive}{1} {green}|{default} Камнями: {olive}{2} {green}|{default} Объектами: {olive}{3}"
 	}
 
 	"TANK_TOTAL_DAMAGE"
